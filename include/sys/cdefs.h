@@ -34,16 +34,8 @@
  */
 #include_next <sys/cdefs.h>
 #ifndef _LIBC_NO_FEATURE_VERIFICATION
-#if defined(__arm__)
-#  include <arm/libc-features.h>
-#elif defined(__i386__)
-#  include <i386/libc-features.h>
-#elif defined(__ppc__)
-#  include <ppc/libc-features.h>
-#elif defined(__ppc64__)
-#  include <ppc64/libc-features.h>
-#elif defined(__x86_64__)
-#  include <x86_64/libc-features.h>
+#if defined(__arm__) || defined(__i386__) || defined(__x86_64__)
+#  include "libc-features.h"
 #else
 #  error "Unknown architecture."
 #endif
@@ -111,10 +103,15 @@
 #define LIBC_EXTSN(sym)		__asm("_" __STRING(sym) LIBC_SUF_EXTSN)
 #define LIBC_EXTSN_C(sym)	__asm("_" __STRING(sym) LIBC_SUF_EXTSN LIBC_SUF_NON_CANCELABLE)
 
-extern int __pthread_tsd_first;
 extern int pthread_key_init_np(int, void (*)(void *));
 
-#define	__LIBC_PTHREAD_KEY(x)		(__pthread_tsd_first + (x))
+#include <TargetConditionals.h>
+#if TARGET_IPHONE_SIMULATOR
+/* Simulator keys are offset by 200 */
+#define	__LIBC_PTHREAD_KEY(x)		(210 + (x))
+#else
+#define	__LIBC_PTHREAD_KEY(x)		(10 + (x))
+#endif
 
 /*
  * Libc pthread key assignments

@@ -32,6 +32,17 @@
  * $FreeBSD: src/lib/libc/stdio/printflocal.h,v 1.3 2009/03/02 04:07:58 das Exp $
  */
 
+/* 
+ * Defining here VECTORS for all files that include this header (<rdar://problem/8466056>)
+ */
+#ifndef VECTORS
+#define VECTORS
+typedef __attribute__ ((vector_size(16))) unsigned char VECTORTYPE;
+#ifdef __SSE2__
+#define V64TYPE
+#endif /* __SSE2__ */
+#endif /* VECTORS */
+
 /*
  * Flags used during conversion.
  */
@@ -49,6 +60,9 @@
 #define	PTRDIFFT	0x800		/* ptrdiff_t */
 #define	INTMAXT		0x1000		/* intmax_t */
 #define	CHARINT		0x2000		/* print char using int format */
+#ifdef VECTORS
+#define VECTOR          0x4000          /* Altivec or SSE vector */
+#endif /* VECTORS */
 
 /*
  * Macros for converting digits to letters and vice versa
@@ -87,6 +101,21 @@ union arg {
 #endif
 	wint_t	wintarg;
 	wchar_t	*pwchararg;
+#ifdef VECTORS
+	VECTORTYPE		vectorarg;
+	unsigned char		vuchararg[16];
+	signed char		vchararg[16];
+	unsigned short		vushortarg[8];
+	signed short		vshortarg[8];
+	unsigned int		vuintarg[4];
+	signed int		vintarg[4];
+	float			vfloatarg[4];
+#ifdef V64TYPE
+	double			vdoublearg[2];
+	unsigned long long	vulonglongarg[2];
+	long long		vlonglongarg[2];
+#endif /* V64TYPE */
+#endif /* VECTORS */
 };
 
 /* Handle positional parameters. */

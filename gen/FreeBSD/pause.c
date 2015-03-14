@@ -27,9 +27,14 @@
  * SUCH DAMAGE.
  */
 
+#if defined(VARIANT_CANCELABLE) && __DARWIN_NON_CANCELABLE != 0
+#error cancellable call vs. __DARWIN_NON_CANCELABLE mismatch
+#endif
+
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)pause.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
+
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/lib/libc/gen/pause.c,v 1.8 2009/12/05 19:31:38 ed Exp $");
 
@@ -42,7 +47,10 @@ __FBSDID("$FreeBSD: src/lib/libc/gen/pause.c,v 1.8 2009/12/05 19:31:38 ed Exp $"
 int
 __pause(void)
 {
-	return sigpause(sigblock(0L));
+	sigset_t set;
+
+	sigprocmask(0, NULL, &set);
+	return sigsuspend(&set);
 }
 __weak_reference(__pause, pause);
 __weak_reference(__pause, _pause);

@@ -43,13 +43,27 @@
 .Sh SYNOPSIS
 .In string.h
 .Ft char *
-.Fn stpcpy "char * restrict dst" "const char * restrict src"
+.Fo stpcpy
+.Fa "char *dst"
+.Fa "const char *src"
+.Fc
 .Ft char *
-.Fn stpncpy "char * restrict dst" "const char * restrict src" "size_t len"
+.Fo stpncpy
+.Fa "char *restrict dst"
+.Fa "const char *restrict src"
+.Fa "size_t n"
+.Fc
 .Ft char *
-.Fn strcpy "char * restrict dst" "const char * restrict src"
+.Fo strcpy
+.Fa "char *restrict dst"
+.Fa "const char *restrict src"
+.Fc
 .Ft char *
-.Fn strncpy "char * restrict dst" "const char * restrict src" "size_t len"
+.Fo strncpy
+.Fa "char *restrict dst"
+.Fa "const char *restrict src"
+.Fa "size_t n"
+.Fc
 .Sh DESCRIPTION
 The
 .Fn stpcpy
@@ -62,14 +76,14 @@ to
 .Fa dst
 (including the terminating
 .Ql \e0
-character.)
+character).
 .Pp
 The
 .Fn stpncpy
 and
 .Fn strncpy
 functions copy at most
-.Fa len
+.Fa n
 characters from
 .Fa src
 into
@@ -77,7 +91,7 @@ into
 If
 .Fa src
 is less than
-.Fa len
+.Fa n
 characters long,
 the remainder of
 .Fa dst
@@ -89,6 +103,9 @@ Otherwise,
 is
 .Em not
 terminated.
+.Pp
+The source and destination strings should not overlap, as the
+behavior is undefined.
 .Sh RETURN VALUES
 The
 .Fn strcpy
@@ -139,7 +156,7 @@ Note that it does
 .Em not
 .Tn NUL
 terminate
-.Va chararray
+.Va chararray ,
 because the length of the source string is greater than or equal
 to the length argument.
 .Pp
@@ -169,21 +186,26 @@ This could be better achieved using
 as shown in the following example:
 .Pp
 .Dl "(void)strlcpy(buf, input, sizeof(buf));"
-.Pp
-Note that because
-.Xr strlcpy 3
-is not defined in any standards, it should
-only be used when portability is not a concern.
 .Sh SECURITY CONSIDERATIONS
 The
-.Fn strcpy
-function is easily misused in a manner which enables malicious users
+.Fn strcpy ,
+.Fn strncpy ,
+.Fn stpcpy ,
+and
+.Fn stpncpy
+functions are easily misused in a manner which enables malicious users
 to arbitrarily change a running program's functionality through a
 buffer overflow attack.
 (See
 the FSA
 and
 .Sx EXAMPLES . )
+.Pp
+It is recommended that
+.Xr strlcpy 3
+be used instead as a way to avoid such problems.
+.Xr strlcpy 3
+is not defined in any standards, but it has been adopted by most major libc implementations.
 .Sh SEE ALSO
 .Xr bcopy 3 ,
 .Xr memccpy 3 ,

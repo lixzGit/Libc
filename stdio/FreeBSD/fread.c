@@ -58,12 +58,92 @@ fread(void * __restrict buf, size_t size, size_t count, FILE * __restrict fp)
 	return (ret);
 }
 
+/*
+ * The maximum amount to read to avoid integer overflow.  INT_MAX is odd,
+ * so it make sense to make it even.  We subtract (BUFSIZ - 1) to get a
+ * whole number of BUFSIZ chunks.
+ */
+#define MAXREAD	(INT_MAX - (BUFSIZ - 1))
+
+/* __fread0: int sized, with size = 1 */
+static inline int
+__fread0(void * __restrict buf, int count, FILE * __restrict fp)
+{
+	int resid;
+	char *p;
+	int r, ret;
+
+	resid = count;
+	p = buf;
+	/* first deal with anything left in buffer, plus any ungetc buffers */
+	while (resid > (r = fp->_r)) {
+		(void)memcpy((void *)p, (void *)fp->_p, (size_t)r);
+		fp->_p += r;
+		/* fp->_r = 0 ... done in __srefill */
+		p += r;
+		resid -= r;
+		if ((ret = __srefill0(fp)) > 0)
+			break;
+		else if (ret) {
+			/* no more input: return partial result */
+			return (count - resid);
+		}
+	}
+	/*
+	 * 5980080: don't use optimization if __SMBF not set (meaning setvbuf
+	 * was called, and the buffer belongs to the user).
+	 * 6180417: but for unbuffered (__SMBF is not set), so specifically
+	 * test for it.
+	 */
+	if ((fp->_flags & (__SMBF | __SNBF)) && resid > fp->_bf._size) {
+		struct __sbuf save;
+		size_t n;
+
+		save = fp->_bf;
+		fp->_bf._base = (unsigned char *)p;
+		fp->_bf._size = resid;
+		while (fp->_bf._size > 0) {
+			if ((ret = __srefill1(fp)) != 0) {
+				/* no more input: return partial result */
+				resid = fp->_bf._size;
+				fp->_bf = save;
+				fp->_p = fp->_bf._base;
+				/* fp->_r = 0;  already set in __srefill1 */
+				return (count - resid);
+			}
+			fp->_bf._base += fp->_r;
+			fp->_bf._size -= fp->_r;
+		}
+		fp->_bf = save;
+		n = fp->_bf._size * ((resid - 1) / fp->_bf._size);
+		r = resid - n;
+		(void)memcpy((void *)fp->_bf._base, (void *)(p + n), (size_t)r);
+		fp->_p = fp->_bf._base + r;
+		fp->_r = 0;
+	} else {
+		while (resid > (r = fp->_r)) {
+			(void)memcpy((void *)p, (void *)fp->_p, (size_t)r);
+			fp->_p += r;
+			/* fp->_r = 0 ... done in __srefill */
+			p += r;
+			resid -= r;
+			if (__srefill1(fp)) {
+				/* no more input: return partial result */
+				return (count - resid);
+			}
+		}
+		(void)memcpy((void *)p, (void *)fp->_p, resid);
+		fp->_r -= resid;
+		fp->_p += resid;
+	}
+	return (count);
+}
+
 size_t
 __fread(void * __restrict buf, size_t size, size_t count, FILE * __restrict fp)
 {
 	size_t resid;
-	char *p;
-	int r;
+	int r, ret;
 	size_t total;
 
 	/*
@@ -74,21 +154,13 @@ __fread(void * __restrict buf, size_t size, size_t count, FILE * __restrict fp)
 	ORIENT(fp, -1);
 	if (fp->_r < 0)
 		fp->_r = 0;
-	total = resid;
-	p = buf;
-	while (resid > (r = fp->_r)) {
-		(void)memcpy((void *)p, (void *)fp->_p, (size_t)r);
-		fp->_p += r;
-		/* fp->_r = 0 ... done in __srefill */
-		p += r;
-		resid -= r;
-		if (__srefill(fp)) {
-			/* no more input: return partial result */
-			return ((total - resid) / size);
+
+	for (total = resid; resid > 0; buf += r, resid -= r) {
+		r = resid > INT_MAX ? MAXREAD : (int)resid;
+		if ((ret = __fread0(buf, r, fp)) != r) {
+			count = (total - resid + ret) / size;
+			break;
 		}
 	}
-	(void)memcpy((void *)p, (void *)fp->_p, resid);
-	fp->_r -= resid;
-	fp->_p += resid;
 	return (count);
 }

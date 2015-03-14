@@ -41,6 +41,7 @@ __FBSDID("$FreeBSD: src/lib/libc/string/strerror.c,v 1.16 2007/01/09 00:28:12 im
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define	UPREFIX		"Unknown error"
 
@@ -52,12 +53,13 @@ __FBSDID("$FreeBSD: src/lib/libc/string/strerror.c,v 1.16 2007/01/09 00:28:12 im
  */
 #define	EBUFSIZE	(20 + 2 + sizeof(UPREFIX))
 
+#ifndef BUILDING_VARIANT
 /*
  * Doing this by hand instead of linking with stdio(3) avoids bloat for
  * statically linked binaries.
  */
-static void
-errstr(int num, char *uprefix, char *buf, size_t len)
+__private_extern__ void
+__errstr(int num, char *uprefix, char *buf, size_t len)
 {
 	char *t;
 	unsigned int uerr;
@@ -87,8 +89,8 @@ strerror_r(int errnum, char *strerrbuf, size_t buflen)
 	catd = catopen("libc", NL_CAT_LOCALE);
 #endif
 
-	if (errnum < 1 || errnum >= sys_nerr) {
-		errstr(errnum,
+	if (errnum < 0 || errnum >= sys_nerr) {
+		__errstr(errnum,
 #if defined(NLS)
 			catgets(catd, 1, 0xffff, UPREFIX),
 #else
@@ -115,12 +117,31 @@ strerror_r(int errnum, char *strerrbuf, size_t buflen)
 	return (retval);
 }
 
+__private_extern__ char *__strerror_ebuf = NULL;
+#else /* BUILDING_VARIANT */
+__private_extern__ void __errstr(int, char *, size_t);
+
+extern char *__strerror_ebuf;
+#endif /* !BUILDING_VARIANT */
+
 char *
 strerror(int num)
 {
-	static char ebuf[NL_TEXTMAX];
+	// Dynamically allocate a big buffer to receive the text then shrink it
+	// down to the actual size needed.
+	size_t ebufsiz = NL_TEXTMAX;
 
-	if (strerror_r(num, ebuf, sizeof(ebuf)) != 0)
-	errno = EINVAL;
-	return (ebuf);
+	if (__strerror_ebuf == NULL) {
+		__strerror_ebuf = calloc(1, ebufsiz);
+		if (__strerror_ebuf == NULL) {
+			return NULL;
+		}
+	}
+	
+	if (strerror_r(num, __strerror_ebuf, ebufsiz) != 0) {
+#if !__DARWIN_UNIX03
+		errno = EINVAL;
+#endif
+	}
+	return __strerror_ebuf;
 }

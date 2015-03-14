@@ -27,6 +27,10 @@
  * SUCH DAMAGE.
  */
 
+#if defined(VARIANT_CANCELABLE) && __DARWIN_NON_CANCELABLE != 0
+#error cancellable call vs. __DARWIN_NON_CANCELABLE mismatch
+#endif
+
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)sleep.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */

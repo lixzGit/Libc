@@ -41,31 +41,25 @@ __FBSDID("$FreeBSD: src/lib/libc/stdlib/exit.c,v 1.9 2007/01/09 00:28:09 imp Exp
 #include "atexit.h"
 #include "libc_private.h"
 
-void (*__cleanup)(void);
+#include <TargetConditionals.h>
 
-/*
- * This variable is zero until a process has created a thread.
- * It is used to avoid calling locking functions in libc when they
- * are not required. By default, libc is intended to be(come)
- * thread-safe, but without a (significant) penalty to non-threaded
- * processes.
- */
-int	__isthreaded	= 0;
+void (*__cleanup)(void);
+extern void __exit(int) __attribute__((noreturn));
+#if !TARGET_IPHONE_SIMULATOR && (__i386__ || __x86_64__)
+extern void _tlv_exit();
+#endif
 
 /*
  * Exit, flushing stdio buffers if necessary.
  */
 void
-exit(status)
-	int status;
+exit(int status)
 {
-	/* Ensure that the auto-initialization routine is linked in: */
-	extern int _thread_autoinit_dummy_decl;
-
-	_thread_autoinit_dummy_decl = 1;
-
+#if !TARGET_IPHONE_SIMULATOR && (__i386__ || __x86_64__)
+	_tlv_exit(); // C++11 requires thread_local objects to be destroyed before global objects
+#endif
 	__cxa_finalize(NULL);
 	if (__cleanup)
 		(*__cleanup)();
-	_exit(status);
+	__exit(status);
 }

@@ -27,6 +27,9 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/lib/libc/net/sourcefilter.c,v 1.5 2009/04/29 09:58:31 bms Exp $");
 
+/* 8120237: enable INET6 */
+#define __APPLE_USE_RFC_3542
+
 #include "namespace.h"
 
 #include <sys/types.h>
@@ -55,6 +58,10 @@ __FBSDID("$FreeBSD: src/lib/libc/net/sourcefilter.c,v 1.5 2009/04/29 09:58:31 bm
  */
 #ifndef INET
 #define INET
+#endif
+/* 8120237: enable INET6 */
+#ifndef INET6
+#define INET6
 #endif
 
 union sockunion {
@@ -337,7 +344,8 @@ getsourcefilter(int s, uint32_t interface, struct sockaddr *group,
 {
 	struct __msfilterreq	 msfr;
 	sockunion_t		*psu;
-	int			 err, level, nsrcs, optlen, optname;
+	int			 err, level, nsrcs, optname;
+	unsigned int		 optlen;
 
 	if (interface == 0 || group == NULL || numsrc == NULL ||
 	    fmode == NULL) {

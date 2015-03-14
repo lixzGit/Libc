@@ -66,21 +66,11 @@
 
 #include <_types.h>
 
-#ifndef _VA_LIST
-#define _VA_LIST
 /* DO NOT REMOVE THIS COMMENT: fixincludes needs to see:
  * __gnuc_va_list and include <stdarg.h> */
-typedef __darwin_va_list	va_list;
-#endif
-
-#ifndef	_SIZE_T
-#define	_SIZE_T
-typedef	__darwin_size_t		size_t;
-#endif
-
-#ifndef NULL
-#define NULL __DARWIN_NULL
-#endif /* ! NULL */
+#include <sys/_types/_va_list.h>
+#include <sys/_types/_size_t.h>
+#include <sys/_types/_null.h>
 
 typedef __darwin_off_t		fpos_t;
 
@@ -257,7 +247,7 @@ FILE	*fopen(const char * __restrict, const char * __restrict) LIBC_ALIAS(fopen);
 #endif /* !LIBC_ALIAS_FOPEN */
 //End-Libc
 #endif /* (DARWIN_UNLIMITED_STREAMS || _DARWIN_C_SOURCE) */
-int	 fprintf(FILE * __restrict, const char * __restrict, ...) __DARWIN_LDBL_COMPAT(fprintf) __printflike(2, 3);
+int	 fprintf(FILE * __restrict, const char * __restrict, ...) __printflike(2, 3);
 int	 fputc(int, FILE *);
 //Begin-Libc
 #ifndef LIBC_ALIAS_FPUTS
@@ -280,7 +270,7 @@ FILE	*freopen(const char * __restrict, const char * __restrict,
                  FILE * __restrict) LIBC_ALIAS(freopen);
 #endif /* !LIBC_ALIAS_FREOPEN */
 //End-Libc
-int	 fscanf(FILE * __restrict, const char * __restrict, ...) __DARWIN_LDBL_COMPAT(fscanf) __scanflike(2, 3);
+int	 fscanf(FILE * __restrict, const char * __restrict, ...) __scanflike(2, 3);
 int	 fseek(FILE *, long, int);
 int	 fsetpos(FILE *, const fpos_t *);
 long	 ftell(FILE *);
@@ -297,24 +287,28 @@ int	 getc(FILE *);
 int	 getchar(void);
 char	*gets(char *);
 void	 perror(const char *);
-int	 printf(const char * __restrict, ...) __DARWIN_LDBL_COMPAT(printf) __printflike(1, 2);
+int	 printf(const char * __restrict, ...) __printflike(1, 2);
 int	 putc(int, FILE *);
 int	 putchar(int);
 int	 puts(const char *);
 int	 remove(const char *);
 int	 rename (const char *, const char *);
 void	 rewind(FILE *);
-int	 scanf(const char * __restrict, ...) __DARWIN_LDBL_COMPAT(scanf) __scanflike(1, 2);
+int	 scanf(const char * __restrict, ...) __scanflike(1, 2);
 void	 setbuf(FILE * __restrict, char * __restrict);
 int	 setvbuf(FILE * __restrict, char * __restrict, int, size_t);
-int	 sprintf(char * __restrict, const char * __restrict, ...) __DARWIN_LDBL_COMPAT(sprintf) __printflike(2, 3);
-int	 sscanf(const char * __restrict, const char * __restrict, ...) __DARWIN_LDBL_COMPAT(sscanf) __scanflike(2, 3);
+int	 sprintf(char * __restrict, const char * __restrict, ...) __printflike(2, 3);
+int	 sscanf(const char * __restrict, const char * __restrict, ...) __scanflike(2, 3);
 FILE	*tmpfile(void);
+
+#if !defined(_POSIX_C_SOURCE)
+__deprecated_msg("This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of tmpnam(3), it is highly recommended that you use mkstemp(3) instead.")
+#endif
 char	*tmpnam(char *);
 int	 ungetc(int, FILE *);
-int	 vfprintf(FILE * __restrict, const char * __restrict, va_list) __DARWIN_LDBL_COMPAT(vfprintf) __printflike(2, 0);
-int	 vprintf(const char * __restrict, va_list) __DARWIN_LDBL_COMPAT(vprintf) __printflike(1, 0);
-int	 vsprintf(char * __restrict, const char * __restrict, va_list) __DARWIN_LDBL_COMPAT(vsprintf) __printflike(2, 0);
+int	 vfprintf(FILE * __restrict, const char * __restrict, va_list) __printflike(2, 0);
+int	 vprintf(const char * __restrict, va_list) __printflike(1, 0);
+int	 vsprintf(char * __restrict, const char * __restrict, va_list) __printflike(2, 0);
 __END_DECLS
 
 
@@ -388,7 +382,7 @@ __END_DECLS
 /* Functions internal to the implementation. */
 __BEGIN_DECLS
 int	__srget(FILE *);
-int	__svfscanf(FILE *, const char *, va_list) __DARWIN_LDBL_COMPAT(__svfscanf) __scanflike(2, 0);
+int	__svfscanf(FILE *, const char *, va_list) __scanflike(2, 0);
 int	__swbuf(int, FILE *);
 __END_DECLS
 
@@ -398,7 +392,7 @@ __END_DECLS
  */
 #define	__sgetc(p) (--(p)->_r < 0 ? __srget(p) : (int)(*(p)->_p++))
 #if defined(__GNUC__) && defined(__STDC__)
-static __inline int __sputc(int _c, FILE *_p) {
+__header_always_inline int __sputc(int _c, FILE *_p) {
 	if (--_p->_w >= 0 || (_p->_w >= _p->_lbfsize && (char)_c != '\n'))
 		return (*_p->_p++ = _c);
 	else
@@ -438,6 +432,9 @@ int	 getw(FILE *);
 int	 putw(int, FILE *);
 #endif
 
+#if !defined(_POSIX_C_SOURCE)
+__deprecated_msg("This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of tempnam(3), it is highly recommended that you use mkstemp(3) instead.")
+#endif
 //Begin-Libc
 #ifndef LIBC_ALIAS_TEMPNAM
 //End-Libc
@@ -466,10 +463,7 @@ __END_DECLS
  */
 
 #if __DARWIN_C_LEVEL >= 200112L
-#ifndef	_OFF_T
-#define	_OFF_T
-typedef	__darwin_off_t		off_t;
-#endif
+#include <sys/_types/_off_t.h>
 
 __BEGIN_DECLS
 int	 fseeko(FILE *, off_t, int);
@@ -479,11 +473,11 @@ __END_DECLS
 
 #if __DARWIN_C_LEVEL >= 200112L || defined(_C99_SOURCE) || defined(__cplusplus)
 __BEGIN_DECLS
-int	 snprintf(char * __restrict, size_t, const char * __restrict, ...) __DARWIN_LDBL_COMPAT(snprintf) __printflike(3, 4);
-int	 vfscanf(FILE * __restrict, const char * __restrict, va_list) __DARWIN_LDBL_COMPAT(vfscanf) __scanflike(2, 0);
-int	 vscanf(const char * __restrict, va_list) __DARWIN_LDBL_COMPAT(vscanf) __scanflike(1, 0);
-int	 vsnprintf(char * __restrict, size_t, const char * __restrict, va_list) __DARWIN_LDBL_COMPAT(vsnprintf) __printflike(3, 0);
-int	 vsscanf(const char * __restrict, const char * __restrict, va_list) __DARWIN_LDBL_COMPAT(vsscanf) __scanflike(2, 0);
+int	 snprintf(char * __restrict, size_t, const char * __restrict, ...) __printflike(3, 4);
+int	 vfscanf(FILE * __restrict, const char * __restrict, va_list) __scanflike(2, 0);
+int	 vscanf(const char * __restrict, va_list) __scanflike(1, 0);
+int	 vsnprintf(char * __restrict, size_t, const char * __restrict, va_list) __printflike(3, 0);
+int	 vsscanf(const char * __restrict, const char * __restrict, va_list) __scanflike(2, 0);
 __END_DECLS
 #endif /* __DARWIN_C_LEVEL >= 200112L || defined(_C99_SOURCE) || defined(__cplusplus) */
 
@@ -494,14 +488,11 @@ __END_DECLS
  */
 
 #if __DARWIN_C_LEVEL >= 200809L
-#ifndef _SSIZE_T
-#define _SSIZE_T
-typedef __darwin_ssize_t        ssize_t;
-#endif
+#include <sys/_types/_ssize_t.h>
 
 __BEGIN_DECLS
-int	dprintf(int, const char * __restrict, ...) __DARWIN_LDBL_COMPAT(dprintf) __printflike(2, 3) __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_4_3);
-int	vdprintf(int, const char * __restrict, va_list) __DARWIN_LDBL_COMPAT(vdprintf) __printflike(2, 0) __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_4_3);
+int	dprintf(int, const char * __restrict, ...) __printflike(2, 3) __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_4_3);
+int	vdprintf(int, const char * __restrict, va_list) __printflike(2, 0) __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_4_3);
 ssize_t getdelim(char ** __restrict, size_t * __restrict, int, FILE * __restrict) __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_4_3);
 ssize_t getline(char ** __restrict, size_t * __restrict, FILE * __restrict) __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_4_3);
 __END_DECLS
@@ -516,14 +507,14 @@ __BEGIN_DECLS
 extern __const int sys_nerr;		/* perror(3) external variables */
 extern __const char *__const sys_errlist[];
 
-int	 asprintf(char **, const char *, ...) __DARWIN_LDBL_COMPAT(asprintf) __printflike(2, 3);
+int	 asprintf(char ** __restrict, const char * __restrict, ...) __printflike(2, 3);
 char	*ctermid_r(char *);
 char	*fgetln(FILE *, size_t *);
 __const char *fmtcheck(const char *, const char *);
 int	 fpurge(FILE *);
 void	 setbuffer(FILE *, char *, int);
 int	 setlinebuf(FILE *);
-int	 vasprintf(char **, const char *, va_list) __DARWIN_LDBL_COMPAT(vasprintf) __printflike(2, 0);
+int	 vasprintf(char ** __restrict, const char * __restrict, va_list) __printflike(2, 0);
 FILE	*zopen(const char *, const char *, int);
 
 

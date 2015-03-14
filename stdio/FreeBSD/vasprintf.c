@@ -30,20 +30,22 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/lib/libc/stdio/vasprintf.c,v 1.19 2008/04/17 22:17:54 jhb Exp $");
 
+#include "xlocale_private.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include "local.h"
 
-int
-vasprintf(str, fmt, ap)
-	char **str;
-	const char *fmt;
-	__va_list ap;
+__private_extern__ int
+_vasprintf(printf_comp_t __restrict pc, printf_domain_t __restrict domain, char ** __restrict str, locale_t __restrict loc, const char * __restrict fmt, __va_list ap)
 {
 	int ret;
 	FILE f;
-
+	struct __sFILEX ext;
+	f._extra = &ext;
+	INITEXTRA(&f);
+	
 	f._file = -1;
 	f._flags = __SWR | __SSTR | __SALC;
 	f._bf._base = f._p = (unsigned char *)malloc(128);
@@ -55,7 +57,7 @@ vasprintf(str, fmt, ap)
 	f._bf._size = f._w = 127;		/* Leave room for the NUL */
 	f._orientation = 0;
 	memset(&f._mbstate, 0, sizeof(mbstate_t));
-	ret = __vfprintf(&f, fmt, ap);
+	ret = __v2printf(pc, domain, &f, loc, fmt, ap);
 	if (ret < 0) {
 		free(f._bf._base);
 		*str = NULL;
@@ -65,4 +67,16 @@ vasprintf(str, fmt, ap)
 	*f._p = '\0';
 	*str = (char *)f._bf._base;
 	return (ret);
+}
+
+int
+vasprintf_l(char ** __restrict str, locale_t __restrict loc, const char * __restrict fmt, __va_list ap)
+{
+	return _vasprintf(XPRINTF_PLAIN, NULL, str, loc, fmt, ap);
+}
+
+int
+vasprintf(char ** __restrict str, const char * __restrict fmt, __va_list ap)
+{
+	return _vasprintf(XPRINTF_PLAIN, NULL, str, __current_locale(), fmt, ap);
 }

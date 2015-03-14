@@ -36,18 +36,22 @@ static char sccsid[] = "@(#)vsnprintf.c	8.1 (Berkeley) 6/4/93";
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/lib/libc/stdio/vsnprintf.c,v 1.24 2008/04/17 22:17:54 jhb Exp $");
 
+#include "xlocale_private.h"
+
 #include <limits.h>
 #include <stdio.h>
 #include "local.h"
 
-int
-vsnprintf(char * __restrict str, size_t n, const char * __restrict fmt,
-    __va_list ap)
+__private_extern__ int
+_vsnprintf(printf_comp_t __restrict pc, printf_domain_t __restrict domain, char * __restrict str, size_t n, locale_t __restrict loc, const char * __restrict fmt, __va_list ap)
 {
 	size_t on;
 	int ret;
 	char dummy[2];
 	FILE f;
+	struct __sFILEX ext;
+	f._extra = &ext;
+	INITEXTRA(&f);
 
 	on = n;
 	if (n != 0)
@@ -67,8 +71,21 @@ vsnprintf(char * __restrict str, size_t n, const char * __restrict fmt,
 	f._bf._size = f._w = n;
 	f._orientation = 0;
 	memset(&f._mbstate, 0, sizeof(mbstate_t));
-	ret = __vfprintf(&f, fmt, ap);
+	ret = __v2printf(pc, domain, &f, loc, fmt, ap);
 	if (on > 0)
 		*f._p = '\0';
 	return (ret);
+}
+int
+vsnprintf_l(char * __restrict str, size_t n, locale_t __restrict loc, const char * __restrict fmt,
+    __va_list ap)
+{
+	return _vsnprintf(XPRINTF_PLAIN, NULL, str, n, loc, fmt, ap);
+}
+
+int
+vsnprintf(char * __restrict str, size_t n, const char * __restrict fmt,
+    __va_list ap)
+{
+	return _vsnprintf(XPRINTF_PLAIN, NULL, str, n, __current_locale(), fmt, ap);
 }

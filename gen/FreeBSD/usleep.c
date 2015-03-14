@@ -27,6 +27,10 @@
  * SUCH DAMAGE.
  */
 
+#if defined(VARIANT_CANCELABLE) && __DARWIN_NON_CANCELABLE != 0
+#error cancellable call vs. __DARWIN_NON_CANCELABLE mismatch
+#endif
+
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)usleep.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
@@ -39,7 +43,7 @@ __FBSDID("$FreeBSD: src/lib/libc/gen/usleep.c,v 1.31 2009/12/05 19:31:38 ed Exp 
 #include "un-namespace.h"
 
 int
-__usleep(useconds_t useconds)
+usleep(useconds_t useconds)
 {
 	struct timespec time_to_sleep;
 
@@ -47,6 +51,3 @@ __usleep(useconds_t useconds)
 	time_to_sleep.tv_sec = useconds / 1000000;
 	return (_nanosleep(&time_to_sleep, NULL));
 }
-
-__weak_reference(__usleep, usleep);
-__weak_reference(__usleep, _usleep);
