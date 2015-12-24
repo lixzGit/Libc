@@ -1,9 +1,5 @@
 #!/usr/bin/perl
 
-if ($ENV{"ACTION"} eq "installhdrs") {
-	exit 0;
-}
-
 # Generates the libc-features.h files used to control #ifdef behaviour in Libc
 use warnings;
 use Data::Dumper;
@@ -225,6 +221,12 @@ for my $arch (split(/ /, $ENV{"ARCHS"}))
 			printf HEADER "#define XPRINTF_PERF 1\n";
 		} else {
 			printf HEADER "/* #undef XPRINTF_PERF */\n";
+		}
+
+		if (defined($features{"FEATURE_SIGNAL_RESTRICTION"})) {
+			printf HEADER "#define FEATURE_SIGNAL_RESTRICTION 1\n";
+		} else {
+			printf HEADER "/* #undef FEATURE_SIGNAL_RESTRICTION */\n";
 		}
 
 		printf HEADER "#endif // _LIBC_FEATURES_H_\n";
